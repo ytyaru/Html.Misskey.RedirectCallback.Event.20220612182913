@@ -8,17 +8,17 @@ class MisskeyAuthorizer { // https://forum.misskey.io/d/6-miauth
         const json = await client.meta()
         console.debug(json)
         console.debug(json.version)
-        return this.#getAuthorizerFromVersion(domain, permissions, json.version)
+        return this.getAuthorizerFromVersion(domain, permissions, json.version)
     }
-    #getAuthorizerFromVersion(domain, permissions, version) { // ミスキーv12.39以降はMiAuth、それ以前ならOAuthで認証する
-        const v = json.version.split('.')
+    static getAuthorizerFromVersion(domain, permissions, version) { // ミスキーv12.39以降はMiAuth、それ以前ならOAuthで認証する
+        const v = version.split('.')
         const isMiAuth= (12 <= parseInt(v[0]) && 39 <= parseInt(v[1])) 
         const auth = (isMiAuth) ? 'MiAuth' : 'OAuth'
         console.debug('認証方法:', auth)
-        session.setItem(`misskey-domain`, domain)
-        session.setItem(`misskey-permission`, permission)
-        session.setItem(`misskey-${domain}-version`, version)
-        session.setItem(`misskey-${domain}-auth-method`, auth)
+        sessionStorage.setItem(`misskey-domain`, domain)
+        sessionStorage.setItem(`misskey-${domain}-version`, version)
+        sessionStorage.setItem(`misskey-${domain}-auth-method`, auth)
+        sessionStorage.setItem(`misskey-${domain}-permission`, permissions)
         return (isMiAuth) ? new MisskeyAuthorizerMiAuth(domain, permissions) : new MisskeyAuthorizerOAuth(domain, permissions)
     }
 }

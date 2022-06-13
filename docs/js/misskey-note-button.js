@@ -39,9 +39,11 @@ class MisskeyNoteButton extends HTMLElement {
         else if ('ng-msg' === property) { this.ngMsg = newValue}
         else { this[property] = newValue; }
     }
+    /*
     #getAuthorizer() { // ミスキーv12.39以降とそれ以前では認証方法が違うため必要。本当はversionをAPIで取得して判定させたかったが、versionを取得できなかったため諦めた。
         return ('misskey.io' == this.domain) ? new MisskeyAuthorizerMiAuth(this.domain) : new MisskeyAuthorizerOAuth(this.domain)
     }
+    */
     #error(e) {
         console.error(e)
         this.#clearSettion()
@@ -98,8 +100,11 @@ class MisskeyNoteButton extends HTMLElement {
             if (!domain || !json) { Toaster.toast(`指定したURLやドメイン ${domain} はMisskeyのインスタンスでない可能性があります。\napi/v1/instanceリクエストをしても想定した応答が返ってこなかったためです。\n入力したURLやドメイン名がMisskeyのインスタンスであるか確認してください。あるいはMisskeyの仕様変更が起きたのかもしれません。対応したソースコードを書き換えるしかないでしょう。`, true); return; }
             this.domain = domain
             console.debug(domain)
-            const authorizer = new MisskeyAuthorizer(domain, 'write:notes')
-            authorizer.authorize(['status'], [{status:status}])
+            const authorizer = await MisskeyAuthorizer.get(domain, 'write:notes')
+            console.debug(authorizer)
+            await authorizer.authorize(['note'], [{text:text}])
+            //await authorizer.authorize(['note'], [{text:text, visibility:'private'}]) // テスト用に公開範囲をprivateにした。がエラーになった。
+
             /*
             const domain = (this.domain) ? this.domain : this.#getDomain()
             this.domain = domain

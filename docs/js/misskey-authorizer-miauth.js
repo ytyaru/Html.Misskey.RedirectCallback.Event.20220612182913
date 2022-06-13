@@ -6,7 +6,7 @@ class MisskeyAuthorizerMiAuth { // https://forum.misskey.io/d/6-miauth
         url.searchParams.delete('code');
         this.callbackUrl = url.href
         this.domain = domain
-        this.permission = (Array.isArray(permissions)) ? permissions.join(',') : ((typeof inputText === 'string' || inputText instanceof String)) ? permissions : '' //カンマ区切り。'write:notes' https://misskey.m544.net/api-doc/#section/Permissions
+        this.permission = (Array.isArray(permissions)) ? permissions.join(',') : ((typeof permissions === 'string' || permissions instanceof String)) ? permissions : '' //カンマ区切り。'write:notes' https://misskey.m544.net/api-doc/#section/Permissions
         this.client = new MisskeyRestClient(this.domain)
     }
     getDefaultJsonHeaders() { return {
@@ -14,12 +14,19 @@ class MisskeyAuthorizerMiAuth { // https://forum.misskey.io/d/6-miauth
         'Content-Type': 'application/json',
     }}
     getJsonHeaders(headers=null) { return (headers) ? {...this.getDefaultJsonHeaders(), ...headers} : this.getDefaultJsonHeaders() }
-    async authorize(text) {
+    //async authorize(text) {
+    async authorize(action=null, params=null) {
         console.debug('----- misskey v12 authorize -----')
         sessionStorage.setItem(`misskey-domain`, this.domain)
-        sessionStorage.setItem(`misskey-text`, text)
+        //sessionStorage.setItem(`misskey-text`, text)
+        if (action) {
+            sessionStorage.setItem(`misskey-${this.domain}-callback-action`, (Array.isArray(action)) ? action.join('\n') : action)
+        }
+        if (params) {
+            sessionStorage.setItem(`misskey-${this.domain}-callback-action-params`, (Array.isArray(params)) ? params.map(p=>JSON.stringify(p)).join('\n') : JSON.stringify(params))
+        }
         const session = UUIDv4.generate()
-        sessionStorage.setItem(`misskey-${this.domain}-session`, session)
+        sessionStorage.setItem(`misskey-${this.domain}-miauth-session`, session)
         const endpoint = `https://${this.domain}/miauth/${session}`
         /*
         const params = {
@@ -38,8 +45,8 @@ class MisskeyAuthorizerMiAuth { // https://forum.misskey.io/d/6-miauth
         //params.set('icon', '')
         const url = `${endpoint}?${params.toString()}`
         */
-        const params = new URLSearchParams()
-        params.set('callback', this.callbackUrl)
+        const p = new URLSearchParams()
+        p.set('callback', this.callbackUrl)
         // なぜか原因不明の応答が返ってこない現象にみまわれる
         // * nameはMyAppでないと返ってこない？
         // * permissionの:をURLエンコードしたら返ってこない？
@@ -47,7 +54,7 @@ class MisskeyAuthorizerMiAuth { // https://forum.misskey.io/d/6-miauth
         // * 現在のページでlocation.href = urlしたら返ってこない？（代わりにwindow.open(url)する）
         // 上記すべてを満たしたら返ってきた。マジで意味不明。
         // https://misskey-hub.net/docs/api/
-        const url = `${endpoint}?name=MyApp&${params.toString()}&permission=${this.permission}`
+        const url = `${endpoint}?name=MyApp&${p.toString()}&permission=${this.permission}`
         console.log(url)
         const sleep = (second) => new Promise(resolve => setTimeout(resolve, second * 1000))
         await sleep(2)
@@ -56,7 +63,7 @@ class MisskeyAuthorizerMiAuth { // https://forum.misskey.io/d/6-miauth
     }
     async redirectCallback() {
         const url = new URL(location.href)
-        console.debug('----- redirectCallback() v12 -----')
+        console.debug('----- MiAuth redirectCallback -----')
         console.debug(url, url.href)
         console.debug(url.searchParams.has('session'), sessionStorage.getItem(`misskey-domain`))
         if (url.searchParams.has('session')) {

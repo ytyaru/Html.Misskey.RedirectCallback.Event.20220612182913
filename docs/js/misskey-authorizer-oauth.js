@@ -6,16 +6,23 @@ class MisskeyAuthorizerOAuth {
         this.callbackUrl = url.href
         this.domain = domain
         //this.permission = (permissions) ? permissions : ['write:notes'] // https://misskey.m544.net/api-doc/#section/Permissions
-        this.permission = (Array.isArray(permissions)) ? permissions: ((typeof inputText === 'string' || inputText instanceof String)) ? permissions.split(',') : [''] //カンマ区切り。'write:notes' https://misskey.m544.net/api-doc/#section/Permissions
+        this.permission = (Array.isArray(permissions)) ? permissions: ((typeof permissions === 'string' || permissions instanceof String)) ? permissions.split(',') : [''] //カンマ区切り。'write:notes' https://misskey.m544.net/api-doc/#section/Permissions
         this.client = new MisskeyRestClient(this.domain)
     }
-    async authorize(text) {
+    //async authorize(text) {
+    async authorize(action=null, params=null) {
         this.#createApp()
         const app = await this.#createApp().catch(e=>alert(e))
         console.debug(app)
         sessionStorage.setItem(`misskey-domain`, this.domain);
-        sessionStorage.setItem(`misskey-text`, text);
-        sessionStorage.setItem(`${this.domain}-secret`, app.secret);
+        //sessionStorage.setItem(`misskey-text`, text);
+        if (action) {
+            sessionStorage.setItem(`misskey-${this.domain}-callback-action`, (Array.isArray(action)) ? action.join('\n') : action)
+        }
+        if (params) {
+            sessionStorage.setItem(`misskey-${this.domain}-callback-action-params`, (Array.isArray(params)) ? params.map(p=>JSON.stringify(p)).join('\n') : JSON.stringify(params))
+        }
+        sessionStorage.setItem(`misskey-${this.domain}-oauth-secret`, app.secret);
         //sessionStorage.setItem(`${domain}-app`, JSON.stringify(app));
         //sessionStorage.setItem(`${domain}-id`, app.id);
         this.#authorize(app.secret)
@@ -35,51 +42,39 @@ class MisskeyAuthorizerOAuth {
         const params = {appSecret:appSecret}
         const res = await this.client.post('auth/session/generate', null, params)
         console.debug(res)
-        sessionStorage.setItem(`${this.domain}-token`, res.token);
+        sessionStorage.setItem(`misskey-${this.domain}-oauth-token`, res.token);
         //const sleep = (second) => new Promise(resolve => setTimeout(resolve, second * 1000))
         //await sleep(2)
         window.location.href = res.url
     }
     async redirectCallback() {
         const url = new URL(location.href)
-        console.debug('----- #redirectCallback() -----')
+        console.debug('----- OAuth #redirectCallback() -----')
         console.debug(url, url.href)
         console.debug(url.searchParams.has('token'), sessionStorage.getItem(`misskey-domain`))
         // misskey API auth/session/generate でリダイレクトされた場合（認証に成功した場合）
         if (url.searchParams.has('token')) {
             console.debug('------------- 認証に成功した（リダイレクトされた） -------------')
             const domain = sessionStorage.getItem(`misskey-domain`);
-            //const client = new MisskeyNoteClient(domain)
+            const permission = sessionStorage.getItem(`misskey-${domain}-permission`);
             const token = url.searchParams.get('token')
-            sessionStorage.setItem(`${domain}-token`, token)
+            sessionStorage.setItem(`misskey-${domain}-oauth-token`, token)
             // 認証コード(token)をURLパラメータから削除する
             const params = url.searchParams;
             params.delete('token');
             history.replaceState('', '', url.pathname);
             // トークンを取得して有効であることを確認しノートする
-            //const text = sessionStorage.getItem(`misskey-text`)
+            const secret = sessionStorage.getItem(`misskey-${domain}-oauth-secret`)
             console.debug('----- authorized -----')
-            //console.debug('id:', sessionStorage.getItem(`${domain}-id`))
-            console.debug('secret:', sessionStorage.getItem(`${domain}-secret`))
+            console.debug('secret:', secret)
             console.debug('token:', token)
-            // client_id, client_secretはsessionStorageに保存しておく必要がある
-            //const json = await client.getToken(sessionStorage.getItem(`${domain}-secret`), token)
-            const json = await this.#getToken(sessionStorage.getItem(`${domain}-secret`), token)
-            //this.#errorApi(json)
+            const json = await this.#getToken(sessionStorage.getItem(`misskey-${domain}-oauth-secret`), token)
             console.debug('accessToken:', json.accessToken)
-            sessionStorage.setItem(`${domain}-accessToken`, json.accessToken);
+            sessionStorage.setItem(`misskey-${domain}-oauth-accessToken`, json.accessToken);
             const accessToken = json.accessToken
-            const i = await this.#getI(json.accessToken, sessionStorage.getItem(`${domain}-secret`))
-            sessionStorage.setItem(`${domain}-i`, i)
+            const i = await this.#getI(json.accessToken, sessionStorage.getItem(`misskey-${domain}-oauth-secret`))
+            sessionStorage.setItem(`misskey-${domain}-i`, i)
             return i
-            /*
-            const res = await client.note(i, text)
-            this.#errorApi(res)
-            this.#requestWebmention(res)
-            sessionStorage.removeItem(`text`)
-            this.#noteEvent(res)
-            console.debug('----- 以上 -----')
-            */
         }
     }
     async #getToken(appSecret, token) {
@@ -97,6 +92,42 @@ class MisskeyAuthorizerOAuth {
         const digest = await crypto.subtle.digest('SHA-256', buff);
         return [].map.call(new Uint8Array(digest), x => ('00' + x.toString(16)).slice(-2)).join('');
     }
+    /*
+    async redirectCallback() {
+        const url = new URL(location.href)
+        console.debug('----- #redirectCallback() -----')
+        console.debug(url, url.href)
+        console.debug(url.searchParams.has('token'), sessionStorage.getItem(`misskey-domain`))
+        // misskey API auth/session/generate でリダイレクトされた場合（認証に成功した場合）
+        if (url.searchParams.has('token')) {
+            console.debug('------------- 認証に成功した（リダイレクトされた） -------------')
+            const domain = sessionStorage.getItem(`misskey-domain`);
+            //const client = new MisskeyNoteClient(domain)
+            const token = url.searchParams.get('token')
+            sessionStorage.setItem(`misskey-${domain}-oauth-token`, token)
+            // 認証コード(token)をURLパラメータから削除する
+            const params = url.searchParams;
+            params.delete('token');
+            history.replaceState('', '', url.pathname);
+            // トークンを取得して有効であることを確認しノートする
+            //const text = sessionStorage.getItem(`misskey-text`)
+            console.debug('----- authorized -----')
+            //console.debug('id:', sessionStorage.getItem(`${domain}-id`))
+            console.debug('secret:', sessionStorage.getItem(`misskey-${domain}-oauth-secret`))
+            console.debug('token:', token)
+            // client_id, client_secretはsessionStorageに保存しておく必要がある
+            //const json = await client.getToken(sessionStorage.getItem(`${domain}-secret`), token)
+            const json = await this.#getToken(sessionStorage.getItem(`misskey-${domain}-oauth-secret`), token)
+            //this.#errorApi(json)
+            console.debug('accessToken:', json.accessToken)
+            sessionStorage.setItem(`${domain}-accessToken`, json.accessToken);
+            const accessToken = json.accessToken
+            const i = await this.#getI(json.accessToken, sessionStorage.getItem(`misskey-${domain}-oauth-secret`))
+            sessionStorage.setItem(`${domain}-i`, i)
+            return i
+        }
+    }
+    */
     /*
     async note(i, text) {
         console.debug('----- note -----')

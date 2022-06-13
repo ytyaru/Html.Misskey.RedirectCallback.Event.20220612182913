@@ -132,10 +132,12 @@
 <form>
     <fieldset>
     <legend>アカウント情報を取得する</legend>
-    <label>ミスキー・インスタンスのドメイン名またはURL：<input id="misskey-instance" value="misskey.io" placeholder="misskey.io" list="misskey-instance-candidate" autocomplete="on"></label>
+    <label>ミスキー・インスタンスのドメイン名またはURL：<input id="misskey-instance" value="" placeholder="misskey.io" list="misskey-instance-candidate" autocomplete="on"></label>
     <datalist id="misskey-instance-candidate">
         <option value="misskey.io">misskey.io</option>
         <option value="misskey.dev">misskey.dev</option>
+        <option value="sushi.ski">sushi.ski</option>
+        <option value="meisskey.one">meisskey.one</option>
     </datalist>
     <button id="get-misskey-account-info" type="button">認証してアカウント情報を取得する</button>
     </fieldset>

@@ -41,7 +41,7 @@ class MisskeyInstance {
         if (await !this.#isMisskey(json)) { return false }
         return true
     }
-    async #isMisskey(json) {
+    static async #isMisskey(json) {
         if (!json) { return false }
         if (!json.hasOwnProperty('version')) { return false; }
         return true

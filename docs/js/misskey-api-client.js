@@ -10,11 +10,14 @@ class MisskeyApiClient {
         console.debug(detail)
         return await this._client.post('meta', null, {detail:detail})
     }
-    async note(text) { // permission: 'write:notes'
+    //async note(text) { // permission: 'write:notes'
+    async note(json) { // permission: 'write:notes'
         console.debug('----- note -----')
         console.debug(this._i)
-        console.debug(text)
-        return await this._client.post('notes/create', null, this._params({text:text}))
+        console.debug(json)
+        console.debug(this._params(json))
+        //return await this._client.post('notes/create', null, this._params({text:text}))
+        return await this._client.post('notes/create', null, this._params(json))
         //const params = this._params({text:text})
         //return await this._client.post('notes/create', null, params)
     }

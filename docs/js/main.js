@@ -11,7 +11,7 @@ window.addEventListener('DOMContentLoaded', async(event) => {
         if (await MastodonInstance.isExist(domain)) {
             console.debug('指定したインスタンスは存在する')
             const authorizer = new MastodonAuthorizer(domain, 'read:accounts')
-            authorizer.authorize(['accounts'], null)
+            await authorizer.authorize(['accounts'], null)
         } else {
             Toaster.toast('指定したインスタンスは存在しません。', true)
         }
@@ -50,10 +50,12 @@ window.addEventListener('DOMContentLoaded', async(event) => {
     */
     document.getElementById('get-misskey-account-info').addEventListener('click', async(event) => {
         const domain = document.getElementById('misskey-instance').value
+        if ('' == domain.trim()) { Toaster.toast(`インスタンスのドメイン名またはURLを入力してください。`, true); return; }
         if (await MisskeyInstance.isExist(domain)) {
             console.debug('指定したインスタンスは存在する')
-            const authorizer = new MisskeyAuthorizer(domain, 'read:accounts')
-            authorizer.authorize(['accounts'], null)
+            const authorizer = await MisskeyAuthorizer.get(domain, 'read:account')
+            console.debug(authorizer)
+            await authorizer.authorize(['i'], null)
         } else {
             Toaster.toast('指定したインスタンスは存在しません。', true)
         }
@@ -72,12 +74,12 @@ window.addEventListener('DOMContentLoaded', async(event) => {
         //const res = event.detail.client.toot(JSON.parse(event.detail.params[0]))
         // 独自処理
         for (let i=0; i<event.detail.actions.length; i++) {
-            if ('accounts' == event.detail.actions[i]) {
+            if ('i' == event.detail.actions[i]) {
                 const gen = new MisskeyProfileGenerator(event.detail.domain)
                 document.getElementById('export-misskey').innerHTML = gen.generate(event.detail.results[i])
             }
             else if ('note' == event.detail.actions[i]) {
-                const html = new Comment().misskeyResToComment(event.detail.results[i])
+                const html = new Comment().misskeyResToComment(event.detail.results[i].createdNote, event.detail.domain)
                 const comment = document.querySelector(`mention-section`).shadowRoot.querySelector(`#web-mention-comment`)
                 comment.innerHTML = html + comment.innerHTML
             }
